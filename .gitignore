@@ -1,0 +1,9 @@
+*.png
+plots/
+.vscode/
+__pycache__/
+*.pyc
+*.pkl
+*.log
+*.csv
+*.json

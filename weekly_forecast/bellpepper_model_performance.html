@@ -1,0 +1,158 @@
+
+<style>
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem}
+.metric-label{font-size:12px;color:var(--color-text-secondary);margin:0 0 4px}
+.metric-value{font-size:22px;font-weight:500;margin:0;color:var(--color-text-primary)}
+.metric-sub{font-size:12px;color:var(--color-text-tertiary);margin:2px 0 0}
+.chart-title{font-size:14px;font-weight:500;margin:0 0 12px;color:var(--color-text-primary)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;font-size:12px;color:var(--color-text-secondary)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend-sq{width:10px;height:10px;border-radius:2px;display:inline-block}
+</style>
+
+<h2 class="sr-only">Bell pepper weekly forecast model performance dashboard showing walk-forward cross-validation results from 2018 to 2025, feature importances, and error distribution.</h2>
+
+<div class="metric-grid">
+  <div class="metric">
+    <p class="metric-label">Mean MAE</p>
+    <p class="metric-value">87.9 t</p>
+    <p class="metric-sub">across 8 test years</p>
+  </div>
+  <div class="metric">
+    <p class="metric-label">Mean MAPE (active weeks)</p>
+    <p class="metric-value">30.4%</p>
+    <p class="metric-sub">weeks with &gt;10 t incoming</p>
+  </div>
+  <div class="metric">
+    <p class="metric-label">Best year</p>
+    <p class="metric-value">2024</p>
+    <p class="metric-sub">MAE 67.8 t · MAPE 30.1%</p>
+  </div>
+  <div class="metric">
+    <p class="metric-label">Top feature</p>
+    <p class="metric-value">lag52</p>
+    <p class="metric-sub">63.9% of model importance</p>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <p class="chart-title">MAE per test year (tonnes)</p>
+    <div class="legend">
+      <span><span class="legend-sq" style="background:#378ADD"></span>MAE (t)</span>
+      <span><span class="legend-sq" style="background:#1D9E75;border:1px dashed #1D9E75"></span>Mean MAE</span>
+    </div>
+    <div style="position:relative;height:220px"><canvas id="maeChart" role="img" aria-label="Bar chart of MAE per test year from 2018 to 2025. Values range from 67.8 tonnes in 2024 to 117.4 tonnes in 2019. Mean MAE is 87.9 tonnes.">MAE values: 2018=76.3t, 2019=117.4t, 2020=73.8t, 2021=78.3t, 2022=97.2t, 2023=89.4t, 2024=67.8t, 2025=102.8t.</canvas></div>
+  </div>
+
+  <div class="card">
+    <p class="chart-title">MAPE on active weeks (%)</p>
+    <div class="legend">
+      <span><span class="legend-sq" style="background:#1D9E75"></span>MAPE %</span>
+      <span><span class="legend-sq" style="background:#378ADD;border:1px dashed #378ADD"></span>Mean MAPE</span>
+    </div>
+    <div style="position:relative;height:220px"><canvas id="mapeChart" role="img" aria-label="Bar chart of MAPE on active weeks per test year from 2018 to 2025. Values range from 23.6% in 2023 to 55.8% in 2019. Mean MAPE is 30.4%.">MAPE values: 2018=25.4%, 2019=55.8%, 2020=25.4%, 2021=28.6%, 2022=29.6%, 2023=23.6%, 2024=30.1%, 2025=25.1%.</canvas></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <p class="chart-title">Feature importance</p>
+    <div style="position:relative;height:230px"><canvas id="fiChart" role="img" aria-label="Horizontal bar chart of XGBoost feature importances. lag52 dominates at 63.9%, followed by lag1 at 20.0%, week_sin 3.6%, week_cos 2.8%, lag2 2.5%, rad_lag2 1.1%.">Feature importances: lag52 63.9%, lag1 20.0%, week_sin 3.6%, week_cos 2.8%, lag2 2.5%, rad_lag2 1.1%.</canvas></div>
+  </div>
+
+  <div class="card">
+    <p class="chart-title">Training data growth over CV folds</p>
+    <div style="position:relative;height:230px"><canvas id="trainChart" role="img" aria-label="Line chart showing training weeks available per test year, growing from 48 weeks in 2018 to 400 weeks by 2025. MAE overlaid as dots shows no consistent improvement with more data.">Training weeks: 2018=48, 2019=101, 2020=150, 2021=199, 2022=251, 2023=299, 2024=347, 2025=400.</canvas></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const textColor = isDark ? '#c2c0b6' : '#5F5E5A';
+const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+const years = ['2018','2019','2020','2021','2022','2023','2024','2025'];
+const mae   = [76.3, 117.4, 73.8, 78.3, 97.2, 89.4, 67.8, 102.8];
+const mape  = [25.4, 55.8, 25.4, 28.6, 29.6, 23.6, 30.1, 25.1];
+const trainWks = [48, 101, 150, 199, 251, 299, 347, 400];
+const meanMAE  = 87.9;
+const meanMAPE = 30.4;
+
+const baseOpts = (yLabel) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)} ${yLabel}` } } },
+  scales: {
+    x: { ticks: { color: textColor, font:{size:11} }, grid: { color: gridColor } },
+    y: { ticks: { color: textColor, font:{size:11} }, grid: { color: gridColor } }
+  }
+});
+
+new Chart(document.getElementById('maeChart'), {
+  data: {
+    labels: years,
+    datasets: [
+      { type:'bar', label:'MAE (t)', data: mae, backgroundColor: '#378ADD', borderRadius: 4 },
+      { type:'line', label:'Mean MAE', data: Array(8).fill(meanMAE), borderColor:'#1D9E75', borderDash:[4,3], borderWidth:1.5, pointRadius:0, fill:false }
+    ]
+  },
+  options: { ...baseOpts('t'), scales: { x: baseOpts('t').scales.x, y: { ...baseOpts('t').scales.y, title:{ display:true, text:'MAE (tonnes)', color:textColor, font:{size:11} } } } }
+});
+
+new Chart(document.getElementById('mapeChart'), {
+  data: {
+    labels: years,
+    datasets: [
+      { type:'bar', label:'MAPE %', data: mape, backgroundColor: '#1D9E75', borderRadius: 4 },
+      { type:'line', label:'Mean MAPE', data: Array(8).fill(meanMAPE), borderColor:'#378ADD', borderDash:[4,3], borderWidth:1.5, pointRadius:0, fill:false }
+    ]
+  },
+  options: { ...baseOpts('%'), scales: { x: baseOpts('%').scales.x, y: { ...baseOpts('%').scales.y, title:{ display:true, text:'MAPE (%)', color:textColor, font:{size:11} } } } }
+});
+
+const features = ['lag52','lag1','week_sin','week_cos','lag2','rad_lag2'];
+const fi       = [63.9, 20.0, 3.6, 2.8, 2.5, 1.1];
+const fiColors = ['#534AB7','#7F77DD','#AFA9EC','#CECBF6','#9FE1CB','#5DCAA5'];
+
+new Chart(document.getElementById('fiChart'), {
+  type: 'bar',
+  data: {
+    labels: features,
+    datasets: [{ data: fi, backgroundColor: fiColors, borderRadius: 4 }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x.toFixed(1)}%` } } },
+    scales: {
+      x: { ticks:{color:textColor,font:{size:11}}, grid:{color:gridColor}, title:{display:true,text:'Importance (%)',color:textColor,font:{size:11}} },
+      y: { ticks:{color:textColor,font:{size:11}}, grid:{display:false} }
+    }
+  }
+});
+
+new Chart(document.getElementById('trainChart'), {
+  data: {
+    labels: years,
+    datasets: [
+      { type:'bar', label:'Training weeks', data: trainWks, backgroundColor: 'rgba(55,138,221,0.18)', borderColor:'#378ADD', borderWidth:1, borderRadius:3, yAxisID:'y' },
+      { type:'line', label:'MAE (t)', data: mae, borderColor:'#D85A30', borderWidth:2, pointRadius:4, pointBackgroundColor:'#D85A30', fill:false, yAxisID:'y2', tension:0.3 }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ctx.datasetIndex===0 ? ` ${ctx.parsed.y} weeks` : ` ${ctx.parsed.y.toFixed(1)} t MAE` } } },
+    scales:{
+      x:{ ticks:{color:textColor,font:{size:11}}, grid:{color:gridColor} },
+      y:{ position:'left',  ticks:{color:textColor,font:{size:11}}, grid:{color:gridColor}, title:{display:true,text:'Training weeks',color:textColor,font:{size:11}} },
+      y2:{ position:'right', ticks:{color:textColor,font:{size:11}}, grid:{display:false}, title:{display:true,text:'MAE (t)',color:textColor,font:{size:11}} }
+    }
+  }
+});
+</script>

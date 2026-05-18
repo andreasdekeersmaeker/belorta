@@ -34,7 +34,7 @@ MODEL_PATH = "model/xgb_model.pkl"
 WEATHER_CACHE = "data/weather_historical.csv"
 
 FEATURE_COLS = [
-    "lag1", "lag2", "lag4", "lag52",
+    "lag1", "lag2", "lag4", 
     "tmean_lag1", "tmean_lag2",
     "precip_lag1", "precip_lag2",
     "gdd_lag1", "gdd_lag2",
@@ -132,7 +132,7 @@ def build_features(df_weights, df_weather):
     df = df.sort_values(["year", "week"]).reset_index(drop=True)
 
     # Target lags
-    for lag in [1, 2, 4, 52]:
+    for lag in [1, 2, 4]:
         df[f"lag{lag}"] = df["total_kg"].shift(lag)
 
     # Weather lags (1 & 2 weeks prior — known at prediction time)

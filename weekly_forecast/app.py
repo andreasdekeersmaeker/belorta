@@ -215,7 +215,7 @@ def lookup_wx(weather_weekly, year, week, col):
 
 
 def build_feature_row(history, weather_weekly, target_year, target_week, year_min):
-    lags = {n: nth_prev(target_year, target_week, n) for n in [1, 2, 4, 52]}
+    lags = {n: nth_prev(target_year, target_week, n) for n in [1, 2, 4]}
     gdd_roll4 = sum(
         lookup_wx(weather_weekly, *nth_prev(target_year, target_week, i), "gdd")
         for i in range(1, 5)
@@ -224,7 +224,6 @@ def build_feature_row(history, weather_weekly, target_year, target_week, year_mi
         "lag1":        lookup_kg(history, *lags[1]),
         "lag2":        lookup_kg(history, *lags[2]),
         "lag4":        lookup_kg(history, *lags[4]),
-        "lag52":       lookup_kg(history, *lags[52]),
         "tmean_lag1":  lookup_wx(weather_weekly, *lags[1], "tmean"),
         "tmean_lag2":  lookup_wx(weather_weekly, *lags[2], "tmean"),
         "precip_lag1": lookup_wx(weather_weekly, *lags[1], "precip"),
@@ -311,7 +310,7 @@ with st.sidebar:
     st.header("📋 Your delivery data")
     caption_text = (
         f"Provide recent actual incoming weights. "
-        f"**4 weeks minimum** · **52+ weeks** for best accuracy.\n\n"
+        f"**4 weeks minimum**.\n\n"
         f"**{data_info}**"
     )
     st.caption(caption_text)
